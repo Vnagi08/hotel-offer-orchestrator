@@ -1,0 +1,110 @@
+name: hotel-offer-orchestrator
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: hotel-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  # Official Temporal CLI image running the local development server
+  # (in-memory persistence, bundled Web UI). No external database required.
+  temporal:
+    image: temporalio/temporal:1.10.1
+    container_name: hotel-temporal
+    command:
+      - server
+      - start-dev
+      - --ip
+      - 0.0.0.0
+      - --ui-ip
+      - 0.0.0.0
+      - --port
+      - "7233"
+      - --ui-port
+      - "8233"
+      - --log-level
+      - warn
+    ports:
+      - "7233:7233" # gRPC frontend
+      - "8233:8233" # Web UI
+    healthcheck:
+      test: ["CMD", "temporal", "operator", "cluster", "health", "--address", "127.0.0.1:7233"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  api:
+    build:
+      context: .
+      target: runtime
+    container_name: hotel-api
+    command: ["node", "dist/index.js"]
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      PORT: "3000"
+      REDIS_URL: redis://redis:6379
+      HOTELS_TTL_SECONDS: ${HOTELS_TTL_SECONDS:-300}
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_NAMESPACE: default
+      TEMPORAL_TASK_QUEUE: ${TEMPORAL_TASK_QUEUE:-hotel-offers-task-queue}
+      WORKFLOW_EXECUTION_TIMEOUT_MS: ${WORKFLOW_EXECUTION_TIMEOUT_MS:-30000}
+      SUPPLIER_A_BASE_URL: http://api:3000
+      SUPPLIER_B_BASE_URL: http://api:3000
+      SUPPLIER_TIMEOUT_MS: ${SUPPLIER_TIMEOUT_MS:-3000}
+      SUPPLIER_A_ENABLED: ${SUPPLIER_A_ENABLED:-true}
+      SUPPLIER_B_ENABLED: ${SUPPLIER_B_ENABLED:-true}
+    ports:
+      - "3000:3000"
+    depends_on:
+      redis:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  # Executes the Temporal workflow and activities. Needs Redis, the Temporal
+  # frontend and the API (the supplier endpoints the activities call over HTTP).
+  worker:
+    build:
+      context: .
+      target: runtime
+    container_name: hotel-worker
+    command: ["node", "dist/temporal/worker.js"]
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      REDIS_URL: redis://redis:6379
+      HOTELS_TTL_SECONDS: ${HOTELS_TTL_SECONDS:-300}
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_NAMESPACE: default
+      TEMPORAL_TASK_QUEUE: ${TEMPORAL_TASK_QUEUE:-hotel-offers-task-queue}
+      SUPPLIER_A_BASE_URL: http://api:3000
+      SUPPLIER_B_BASE_URL: http://api:3000
+      SUPPLIER_TIMEOUT_MS: ${SUPPLIER_TIMEOUT_MS:-3000}
+    depends_on:
+      redis:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+
+volumes:
+  redis-data:
