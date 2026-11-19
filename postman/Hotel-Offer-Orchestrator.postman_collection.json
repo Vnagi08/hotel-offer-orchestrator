@@ -27,12 +27,27 @@
       "name": "1. Get all Delhi hotels",
       "request": {
         "method": "GET",
-        "header": [{ "key": "Accept", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
         "url": {
           "raw": "{{baseUrl}}/api/hotels?city=delhi",
-          "host": ["{{baseUrl}}"],
-          "path": ["api", "hotels"],
-          "query": [{ "key": "city", "value": "delhi" }]
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "hotels"
+          ],
+          "query": [
+            {
+              "key": "city",
+              "value": "delhi"
+            }
+          ]
         },
         "description": "Runs the Temporal workflow for Delhi, then returns the whole Redis snapshot."
       },
@@ -98,6 +113,10 @@
               "    pm.expect(names).to.include('Taj Palace');",
               "    pm.expect(names).to.include('Novotel');",
               "    pm.expect(names).to.include('The Oberoi');",
+              "});",
+              "",
+              "pm.test('signals a complete (non-partial) result via X-Partial-Results', function () {",
+              "    pm.expect(pm.response.headers.get('X-Partial-Results')).to.eql('false');",
               "});"
             ]
           }
@@ -109,14 +128,30 @@
       "name": "2. Get Delhi hotels with a minimum price",
       "request": {
         "method": "GET",
-        "header": [{ "key": "Accept", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
         "url": {
           "raw": "{{baseUrl}}/api/hotels?city=delhi&minPrice=7500",
-          "host": ["{{baseUrl}}"],
-          "path": ["api", "hotels"],
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "hotels"
+          ],
           "query": [
-            { "key": "city", "value": "delhi" },
-            { "key": "minPrice", "value": "7500" }
+            {
+              "key": "city",
+              "value": "delhi"
+            },
+            {
+              "key": "minPrice",
+              "value": "7500"
+            }
           ]
         },
         "description": "ZRANGEBYSCORE with an inclusive lower bound and +inf as the upper bound."
@@ -159,14 +194,30 @@
       "name": "3. Get Delhi hotels with a maximum price",
       "request": {
         "method": "GET",
-        "header": [{ "key": "Accept", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
         "url": {
           "raw": "{{baseUrl}}/api/hotels?city=delhi&maxPrice=5340",
-          "host": ["{{baseUrl}}"],
-          "path": ["api", "hotels"],
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "hotels"
+          ],
           "query": [
-            { "key": "city", "value": "delhi" },
-            { "key": "maxPrice", "value": "5340" }
+            {
+              "key": "city",
+              "value": "delhi"
+            },
+            {
+              "key": "maxPrice",
+              "value": "5340"
+            }
           ]
         },
         "description": "ZRANGEBYSCORE with -inf as the lower bound and an inclusive upper bound."
@@ -202,15 +253,34 @@
       "name": "4. Get Delhi hotels within a price range",
       "request": {
         "method": "GET",
-        "header": [{ "key": "Accept", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
         "url": {
           "raw": "{{baseUrl}}/api/hotels?city=delhi&minPrice=5000&maxPrice=7000",
-          "host": ["{{baseUrl}}"],
-          "path": ["api", "hotels"],
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "hotels"
+          ],
           "query": [
-            { "key": "city", "value": "delhi" },
-            { "key": "minPrice", "value": "5000" },
-            { "key": "maxPrice", "value": "7000" }
+            {
+              "key": "city",
+              "value": "delhi"
+            },
+            {
+              "key": "minPrice",
+              "value": "5000"
+            },
+            {
+              "key": "maxPrice",
+              "value": "7000"
+            }
           ]
         },
         "description": "Both bounds inclusive, filtered inside Redis."
@@ -250,12 +320,27 @@
       "name": "5. City with no results",
       "request": {
         "method": "GET",
-        "header": [{ "key": "Accept", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
         "url": {
           "raw": "{{baseUrl}}/api/hotels?city=jaipur",
-          "host": ["{{baseUrl}}"],
-          "path": ["api", "hotels"],
-          "query": [{ "key": "city", "value": "jaipur" }]
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "hotels"
+          ],
+          "query": [
+            {
+              "key": "city",
+              "value": "jaipur"
+            }
+          ]
         },
         "description": "Neither supplier covers Jaipur, so the workflow stores and returns an empty snapshot."
       },
@@ -282,12 +367,27 @@
       "name": "6. Invalid city input",
       "request": {
         "method": "GET",
-        "header": [{ "key": "Accept", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
         "url": {
           "raw": "{{baseUrl}}/api/hotels?city=123",
-          "host": ["{{baseUrl}}"],
-          "path": ["api", "hotels"],
-          "query": [{ "key": "city", "value": "123" }]
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "hotels"
+          ],
+          "query": [
+            {
+              "key": "city",
+              "value": "123"
+            }
+          ]
         }
       },
       "event": [
@@ -315,15 +415,34 @@
       "name": "7. Invalid price range (minPrice > maxPrice)",
       "request": {
         "method": "GET",
-        "header": [{ "key": "Accept", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
         "url": {
           "raw": "{{baseUrl}}/api/hotels?city=delhi&minPrice=9000&maxPrice=5000",
-          "host": ["{{baseUrl}}"],
-          "path": ["api", "hotels"],
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "hotels"
+          ],
           "query": [
-            { "key": "city", "value": "delhi" },
-            { "key": "minPrice", "value": "9000" },
-            { "key": "maxPrice", "value": "5000" }
+            {
+              "key": "city",
+              "value": "delhi"
+            },
+            {
+              "key": "minPrice",
+              "value": "9000"
+            },
+            {
+              "key": "maxPrice",
+              "value": "5000"
+            }
           ]
         }
       },
@@ -352,14 +471,30 @@
       "name": "8. Invalid price value (negative)",
       "request": {
         "method": "GET",
-        "header": [{ "key": "Accept", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
         "url": {
           "raw": "{{baseUrl}}/api/hotels?city=delhi&minPrice=-100",
-          "host": ["{{baseUrl}}"],
-          "path": ["api", "hotels"],
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "hotels"
+          ],
           "query": [
-            { "key": "city", "value": "delhi" },
-            { "key": "minPrice", "value": "-100" }
+            {
+              "key": "city",
+              "value": "delhi"
+            },
+            {
+              "key": "minPrice",
+              "value": "-100"
+            }
           ]
         }
       },
@@ -383,11 +518,20 @@
       "name": "9. Health check",
       "request": {
         "method": "GET",
-        "header": [{ "key": "Accept", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
         "url": {
           "raw": "{{baseUrl}}/health",
-          "host": ["{{baseUrl}}"],
-          "path": ["health"]
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
         },
         "description": "200 while Redis and Temporal are reachable, 503 otherwise. Supplier state is always itemised."
       },
@@ -427,12 +571,27 @@
       "name": "10. Supplier A mock endpoint",
       "request": {
         "method": "GET",
-        "header": [{ "key": "Accept", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
         "url": {
           "raw": "{{baseUrl}}/supplierA/hotels?city=delhi",
-          "host": ["{{baseUrl}}"],
-          "path": ["supplierA", "hotels"],
-          "query": [{ "key": "city", "value": "delhi" }]
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "supplierA",
+            "hotels"
+          ],
+          "query": [
+            {
+              "key": "city",
+              "value": "delhi"
+            }
+          ]
         },
         "description": "Returns HTTP 503 when SUPPLIER_A_ENABLED=false, which is how an outage is simulated."
       },
@@ -477,12 +636,27 @@
       "name": "11. Supplier B mock endpoint",
       "request": {
         "method": "GET",
-        "header": [{ "key": "Accept", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
         "url": {
           "raw": "{{baseUrl}}/supplierB/hotels?city=delhi",
-          "host": ["{{baseUrl}}"],
-          "path": ["supplierB", "hotels"],
-          "query": [{ "key": "city", "value": "delhi" }]
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "supplierB",
+            "hotels"
+          ],
+          "query": [
+            {
+              "key": "city",
+              "value": "delhi"
+            }
+          ]
         },
         "description": "Returns HTTP 503 when SUPPLIER_B_ENABLED=false."
       },
@@ -523,6 +697,54 @@
       "response": []
     },
     {
+      "name": "12. Supplier mock endpoint, unsupported city",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/supplierA/hotels?city=paris",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "supplierA",
+            "hotels"
+          ],
+          "query": [
+            {
+              "key": "city",
+              "value": "paris"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('responds with 200 (enabled) or 503 (simulated outage)', function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 503]);",
+              "});",
+              "",
+              "if (pm.response.code === 200) {",
+              "    pm.test('an unsupported city yields an empty catalogue', function () {",
+              "        pm.expect(pm.response.json()).to.eql([]);",
+              "    });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
       "name": "Supplier outage scenarios (run with suppliers disabled)",
       "description": "These requests only pass while the corresponding supplier is switched off. Restart the API (and worker) with the environment variable set, then run this folder:\n\n```bash\n# partial results: Supplier A down\nSUPPLIER_A_ENABLED=false docker compose up -d --force-recreate api worker\n\n# total outage: both down\nSUPPLIER_A_ENABLED=false SUPPLIER_B_ENABLED=false docker compose up -d --force-recreate api worker\n```\n\nRequest 13 expects only Supplier A to be down. Request 14 expects both to be down. Each one skips its assertions when the stack is not in the matching state, so the folder never fails for the wrong reason.",
       "item": [
@@ -530,12 +752,27 @@
           "name": "13. Partial results while Supplier A is down",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/api/hotels?city=delhi",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "hotels"],
-              "query": [{ "key": "city", "value": "delhi" }]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "hotels"
+              ],
+              "query": [
+                {
+                  "key": "city",
+                  "value": "delhi"
+                }
+              ]
             },
             "description": "With SUPPLIER_A_ENABLED=false the workflow retries Supplier A, gives up, and returns Supplier B-only results."
           },
@@ -598,6 +835,10 @@
                   "            pm.expect(hotels[i].price).to.be.at.least(hotels[i - 1].price);",
                   "        }",
                   "    });",
+                  "",
+                  "    pm.test('flags the response as partial via X-Partial-Results', function () {",
+                  "        pm.expect(pm.response.headers.get('X-Partial-Results')).to.eql('true');",
+                  "    });",
                   "}"
                 ]
               }
@@ -609,12 +850,27 @@
           "name": "14. Total outage: both suppliers down",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Accept", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/api/hotels?city=delhi",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "hotels"],
-              "query": [{ "key": "city", "value": "delhi" }]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "hotels"
+              ],
+              "query": [
+                {
+                  "key": "city",
+                  "value": "delhi"
+                }
+              ]
             },
             "description": "With both suppliers disabled the workflow fails with ApplicationFailure type BothSuppliersFailed, which maps to HTTP 502."
           },
@@ -661,39 +917,6 @@
           "response": []
         }
       ]
-    },
-    {
-      "name": "12. Supplier mock endpoint, unsupported city",
-      "request": {
-        "method": "GET",
-        "header": [{ "key": "Accept", "value": "application/json" }],
-        "url": {
-          "raw": "{{baseUrl}}/supplierA/hotels?city=paris",
-          "host": ["{{baseUrl}}"],
-          "path": ["supplierA", "hotels"],
-          "query": [{ "key": "city", "value": "paris" }]
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('responds with 200 (enabled) or 503 (simulated outage)', function () {",
-              "    pm.expect(pm.response.code).to.be.oneOf([200, 503]);",
-              "});",
-              "",
-              "if (pm.response.code === 200) {",
-              "    pm.test('an unsupported city yields an empty catalogue', function () {",
-              "        pm.expect(pm.response.json()).to.eql([]);",
-              "    });",
-              "}"
-            ]
-          }
-        }
-      ],
-      "response": []
     }
   ]
 }

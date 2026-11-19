@@ -72,7 +72,7 @@ flowchart TB
     client --> route --> svc
     svc -- "start workflow, await result" --> queue
     queue --> wf
-    wf -- "Promise.all (parallel)" --> actA & actB
+    wf -- "Promise.allSettled (parallel)" --> actA & actB
     actA -- "HTTP GET" --> supA
     actB -- "HTTP GET" --> supB
     actA & actB --> cmp --> save
@@ -258,7 +258,7 @@ Applied by `compareAndDeduplicate` in [src/services/comparison.service.ts](src/s
 
 This is deliberate:
 
-- The specification defines the filtered endpoint as *"follow the same Temporal workflow, save the deduplicated data in Redis, perform price filtering through Redis"* — so the workflow is part of the request path by design, and filtering is a property of the **read**, not of the workflow.
+- The brief describes the filtered endpoint as going through the same workflow, saving the deduplicated list to Redis and filtering by price inside Redis. Reading that as one pipeline, the workflow belongs on the request path and filtering is a property of the **read**, not of the workflow.
 - It keeps results fresh: a request never returns prices from an earlier snapshot of unknown age.
 - It keeps the two keys consistent with one code path — there is a single writer (the persistence activity) and a single reader (the repository).
 
@@ -384,6 +384,17 @@ curl "http://localhost:3000/api/hotels?city=delhi&minPrice=5000&maxPrice=7000"
 ```
 
 A city neither supplier covers returns `200` with `[]`.
+
+#### `X-Partial-Results` response header
+
+The success body is a bare array, so a partial result (one supplier down) is indistinguishable from a complete one by looking at the JSON. Every `200` therefore carries a header saying which it is, leaving the body format untouched:
+
+```http
+X-Partial-Results: false   # both suppliers answered
+X-Partial-Results: true    # at least one supplier failed; these offers come from the rest
+```
+
+Nothing is required to read it, but a client that cares about completeness — a cache, or a UI wanting to show "prices may be incomplete" — can act on it without parsing the body.
 
 ### `GET /supplierA/hotels` and `GET /supplierB/hotels`
 
@@ -646,7 +657,7 @@ A 500 `INTERNAL_ERROR` is only ever returned for a genuinely unexpected exceptio
 
 ### Why it is an environment variable and not a request flag
 
-There is deliberately **no `?fail=true`, no `?simulateDown=true` and no admin route** — those query parameters are ignored and the endpoint responds normally, by design. The requirement states that failure simulation must not depend on a public request parameter, and a query flag would be the wrong mechanism anyway: an outage is a property of the supplier, not of an individual caller's request.
+There is deliberately **no `?fail=true`, no `?simulateDown=true` and no admin route** — those query parameters are ignored and the endpoint responds normally. This is a design choice: an outage is a property of the supplier, not of an individual caller's request, so a public query flag would be the wrong mechanism. It would also let any caller change another caller's view of supplier health, and it would make the mock behave in a way no real supplier does.
 
 The trade-off is that `SUPPLIER_A_ENABLED` / `SUPPLIER_B_ENABLED` are read **once at process startup**, so **changing them requires a restart**. The exact steps follow.
 

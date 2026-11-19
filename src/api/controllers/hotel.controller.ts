@@ -17,8 +17,11 @@ export async function getHotels(req: Request, res: Response, next: NextFunction)
       'Incoming hotel offers request',
     );
 
-    const { hotels } = await lookupCityHotels(city, { minPrice, maxPrice }, requestId);
+    const { hotels, workflow } = await lookupCityHotels(city, { minPrice, maxPrice }, requestId);
 
+    // The body stays a bare array, so partial results are signalled out of band:
+    // true means at least one supplier failed and these offers come from the rest.
+    res.set('X-Partial-Results', String(workflow.partial));
     res.status(200).json(hotels);
   } catch (error) {
     next(error);
