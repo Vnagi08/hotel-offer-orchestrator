@@ -611,15 +611,95 @@ Continuing with partial supplier results          {"city":"delhi","failedSupplie
 Comparison and deduplication completed            {"rawOfferCount":6,"deduplicatedCount":5,"removedCount":1}
 ```
 
-With both suppliers disabled the workflow fails with `BothSuppliersFailed` and the API returns:
+### What the client receives when both suppliers are down
 
-```json
-{ "error": { "code": "SUPPLIERS_UNAVAILABLE", "message": "No supplier could be reached, so no hotel offers are available right now" } }
+The workflow fails with a non-retryable `ApplicationFailure` of type `BothSuppliersFailed`, and the API maps it to **502 Bad Gateway** with the standard JSON envelope — never a bare 500, and never an empty body. Captured verbatim from a running stack:
+
+```http
+$ curl -i "http://localhost:3000/api/hotels?city=delhi"
+
+HTTP/1.1 502 Bad Gateway
+Content-Type: application/json; charset=utf-8
+Content-Length: 127
+ETag: W/"7f-MABapIeOIEJ/CJBY81TalsNjFm8"
+Date: Thu, 19 Nov 2026 22:52:44 GMT
+Connection: keep-alive
+
+{"error":{"code":"SUPPLIERS_UNAVAILABLE","message":"No supplier could be reached, so no hotel offers are available right now"}}
 ```
+
+The other endpoints in that same state:
+
+| Request | Status | Body |
+| --- | --- | --- |
+| `GET /api/hotels?city=delhi` | **502** | `{"error":{"code":"SUPPLIERS_UNAVAILABLE",…}}` |
+| `GET /api/hotels?city=delhi&minPrice=5000&maxPrice=7000` | **502** | same — the filter is never reached |
+| `GET /supplierA/hotels?city=delhi` | **503** | `{"error":{"code":"SUPPLIER_UNAVAILABLE",…}}` |
+| `GET /supplierB/hotels?city=delhi` | **503** | `{"error":{"code":"SUPPLIER_UNAVAILABLE",…}}` |
+| `GET /health` | **200** | `{"status":"degraded","checks":{"supplierA":{"status":"disabled",…},"supplierB":{"status":"disabled",…},"redis":{"status":"healthy"},"temporal":{"status":"healthy"}}}` |
+
+Why 502 rather than 503: the orchestration layer reached its upstream dependencies and they refused, which is a bad-gateway condition. 503 is reserved for *this* service's own dependencies being unusable — `REDIS_UNAVAILABLE`, or the Temporal frontend being unreachable. `/health` deliberately stays 200 because the API process itself is fine; only its suppliers are gone. The full status/code mapping is in §8.
+
+A 500 `INTERNAL_ERROR` is only ever returned for a genuinely unexpected exception; every anticipated failure has an explicit code.
 
 ### Why it is an environment variable and not a request flag
 
-The requirement is explicit that failure simulation must not depend on a public request parameter, so there is deliberately **no `?fail=` query flag and no admin route**. A query flag would also be the wrong mechanism: it would make the *supplier* behave differently per caller, whereas an outage is a property of the supplier, not of the request. `SUPPLIER_A_ENABLED` / `SUPPLIER_B_ENABLED` are read once at startup, which is why the API (and worker, if you want its logs to match) must be restarted to change them.
+There is deliberately **no `?fail=true`, no `?simulateDown=true` and no admin route** — those query parameters are ignored and the endpoint responds normally, by design. The requirement states that failure simulation must not depend on a public request parameter, and a query flag would be the wrong mechanism anyway: an outage is a property of the supplier, not of an individual caller's request.
+
+The trade-off is that `SUPPLIER_A_ENABLED` / `SUPPLIER_B_ENABLED` are read **once at process startup**, so **changing them requires a restart**. The exact steps follow.
+
+### Step-by-step: reproducing a supplier outage
+
+**With Docker Compose**
+
+```bash
+# 1. Start normally and confirm the healthy baseline: 7 hotels
+docker compose up --build -d
+curl "http://localhost:3000/api/hotels?city=delhi"
+
+# 2. Recreate the API and worker with Supplier A switched off
+SUPPLIER_A_ENABLED=false docker compose up -d --force-recreate api worker
+
+# 3. Confirm the supplier endpoint is now refusing
+curl -i "http://localhost:3000/supplierA/hotels?city=delhi"
+#    HTTP/1.1 503 Service Unavailable
+#    {"error":{"code":"SUPPLIER_UNAVAILABLE","message":"Supplier A is currently unavailable"}}
+
+# 4. The aggregate endpoint still answers, with partial results
+curl "http://localhost:3000/api/hotels?city=delhi"
+#    HTTP 200 - 5 hotels, every one "supplier":"Supplier B"
+
+# 5. Health names the culprit
+curl "http://localhost:3000/health"
+#    {"status":"degraded","checks":{"supplierA":{"status":"disabled",...}}}
+
+# 6. Now take both down
+SUPPLIER_A_ENABLED=false SUPPLIER_B_ENABLED=false docker compose up -d --force-recreate api worker
+curl -i "http://localhost:3000/api/hotels?city=delhi"
+#    HTTP/1.1 502 Bad Gateway  (see the verbatim response below)
+
+# 7. Restore
+docker compose up -d --force-recreate api worker
+```
+
+On Windows PowerShell, set the variable before the command instead of inline:
+
+```powershell
+$env:SUPPLIER_A_ENABLED="false"; docker compose up -d --force-recreate api worker
+Remove-Item Env:\SUPPLIER_A_ENABLED
+```
+
+**Running locally without Docker** — set the variable in `.env` (or in the shell) and restart the two processes:
+
+```bash
+# .env
+SUPPLIER_A_ENABLED=false
+
+npm start            # restart the API  (serves the mock supplier endpoints)
+npm run start:worker # restart the worker (optional; only its logs change)
+```
+
+Only the **API** process needs restarting for the outage to take effect, because the supplier endpoints live there. The worker calls those endpoints over HTTP and picks up the 503 immediately.
 
 ### Verifying the outage path
 
